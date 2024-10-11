@@ -1,0 +1,14 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "api_db/queries"
+    schema: "api_db/schema"
+    gen:
+      go:
+        out: "internal/database"
+        sql_package: "pgx/v5"
+        emit_prepared_queries: true
+        emit_json_tags: true
+        json_tags_case_style: "snake"
+    database:
+      uri: postgresql://tester:${PG_PASSWORD}@127.0.0.1:5432/chat_api?sslmode=disable
