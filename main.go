@@ -7,19 +7,16 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Suryarpan/chat-api/auth_bp"
 	"github.com/Suryarpan/chat-api/internal/apiconf"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 )
 
-type Config struct {
-	DBUrl string
-}
-
 func setUpMiddlewares(r *chi.Mux) error {
 	if r == nil {
-		return errors.New("please provide and router")
+		return errors.New("please provide a router")
 	}
 	r.Use(apiconf.Logger)
 	r.Use(middleware.CleanPath)
@@ -38,13 +35,23 @@ func setUpMiddlewares(r *chi.Mux) error {
 	return nil
 }
 
+func routeSetup(r *chi.Mux) error {
+	if r == nil {
+		return errors.New("please provide a router")
+	}
+
+	// auth api setup
+	r.Mount("/auth", auth_bp.NewRouter())
+	// user api setup
+	// chat data setup
+	// admin setup
+	// router run
+	return nil
+}
+
 func main() {
 	logger := slog.New(*apiconf.LoggerConfig())
 	slog.SetDefault(logger)
-
-	_ = Config{
-		DBUrl: apiconf.DBUrlConfig(),
-	}
 
 	// router setup
 	mainRouter := chi.NewRouter()
@@ -57,10 +64,11 @@ func main() {
 	apiV1router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello World"))
 	})
-	// auth api setup
-	// user api setup
-	// chat data setup
-	// admin setup
+
+	err = routeSetup(apiV1router)
+	if err != nil {
+		panic(fmt.Sprintf("Error: could not mount the sub routes: %v", err))
+	}
 	// router run
 	mainRouter.Mount("/api/v1", apiV1router)
 	port, ok := os.LookupEnv("CHAT_API_PORT")
