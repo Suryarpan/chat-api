@@ -2,12 +2,13 @@
 -- +goose StatementBegin
 CREATE TABLE users (
     id UUID PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    display_name VARCHAR(150) NOT NULL,
     password BYTEA NOT NULL,
     password_salt BYTEA NOT NULL,
     created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+    updated_at TIMESTAMP NOT NULL,
+    last_logged_in TIMESTAMP
 );
 -- +goose StatementEnd
 
