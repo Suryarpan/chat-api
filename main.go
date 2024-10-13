@@ -21,6 +21,7 @@ func setUpMiddlewares(r *chi.Mux) error {
 	if r == nil {
 		return errors.New("please provide and router")
 	}
+	r.Use(apiconf.Logger)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.ContentCharset("UTF-8", "Latin-1"))
 	r.Use(middleware.AllowContentType("application/json", "text/xml"))
@@ -38,7 +39,7 @@ func setUpMiddlewares(r *chi.Mux) error {
 }
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, apiconf.LoggerConfig()))
+	logger := slog.New(*apiconf.LoggerConfig())
 	slog.SetDefault(logger)
 
 	_ = Config{
@@ -53,6 +54,9 @@ func main() {
 	}
 	// base api setup
 	apiV1router := chi.NewRouter()
+	apiV1router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hello World"))
+	})
 	// auth api setup
 	// user api setup
 	// chat data setup
@@ -64,5 +68,13 @@ func main() {
 		panic("Error: could not find CHAT_API_PORT environment variable")
 	}
 	logger.Info("starting router", "port", port)
-	http.ListenAndServe(":" + port, mainRouter)
+
+	server := &http.Server{
+		Handler: mainRouter,
+		Addr:    ":" + port,
+	}
+	err = server.ListenAndServe()
+	if err != nil {
+		slog.Error(fmt.Sprintf("%v", err))
+	}
 }
