@@ -1,38 +1,68 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+
+	"github.com/Suryarpan/chat-api/internal/apiconf"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
-func loggerConfig() *slog.HandlerOptions {
-	level, ok := os.LookupEnv("CHAT_API_CONFIG")
-	if !ok {
-		level = "prod"
-	}
+type Config struct {
+	DBUrl string
+}
 
-	var logLevel slog.Level
-	switch level {
-	case "dev":
-		logLevel = slog.LevelDebug
-	case "prod":
-		logLevel = slog.LevelInfo
-	default:
-		panic(fmt.Sprintf("could not understand log level: %s\n", logLevel))
+func setUpMiddlewares(r *chi.Mux) error {
+	if r == nil {
+		return errors.New("please provide and router")
 	}
-	fmt.Printf("Log level set to %s\n", logLevel)
-	return &slog.HandlerOptions{
-		Level:     logLevel,
-		AddSource: true,
-	}
+	r.Use(middleware.CleanPath)
+	r.Use(middleware.ContentCharset("UTF-8", "Latin-1"))
+	r.Use(middleware.AllowContentType("application/json", "text/xml"))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
+	r.Use(middleware.StripSlashes)
+	r.Use(middleware.Recoverer)
+	return nil
 }
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, loggerConfig()))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, apiconf.LoggerConfig()))
 	slog.SetDefault(logger)
 
-	slog.Info("starting chat api server")
-	slog.Debug("using debug level")
-	slog.Info("using info level")
+	_ = Config{
+		DBUrl: apiconf.DBUrlConfig(),
+	}
+
+	// router setup
+	mainRouter := chi.NewRouter()
+	err := setUpMiddlewares(mainRouter)
+	if err != nil {
+		panic(fmt.Sprintf("Error: could not setup middlewares: %v", err))
+	}
+	// base api setup
+	apiV1router := chi.NewRouter()
+	// auth api setup
+	// user api setup
+	// chat data setup
+	// admin setup
+	// router run
+	mainRouter.Mount("/api/v1", apiV1router)
+	port, ok := os.LookupEnv("CHAT_API_PORT")
+	if !ok {
+		panic("Error: could not find CHAT_API_PORT environment variable")
+	}
+	logger.Info("starting router", "port", port)
+	http.ListenAndServe(":" + port, mainRouter)
 }

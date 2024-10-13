@@ -2,7 +2,11 @@ module github.com/Suryarpan/chat-api
 
 go 1.23.0
 
-require github.com/jackc/pgx/v5 v5.7.1
+require (
+	github.com/go-chi/chi/v5 v5.1.0
+	github.com/go-chi/cors v1.2.1
+	github.com/jackc/pgx/v5 v5.7.1
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect

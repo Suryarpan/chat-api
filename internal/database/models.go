@@ -10,10 +10,10 @@ import (
 
 type User struct {
 	ID           pgtype.UUID      `json:"id"`
-	Name         pgtype.Text      `json:"name"`
-	Email        pgtype.Text      `json:"email"`
-	Password     pgtype.Text      `json:"password"`
-	PasswordSalt pgtype.Text      `json:"password_salt"`
+	Name         string           `json:"name"`
+	Email        string           `json:"email"`
+	Password     []byte           `json:"password"`
+	PasswordSalt []byte           `json:"password_salt"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
 	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 }
