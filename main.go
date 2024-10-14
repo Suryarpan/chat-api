@@ -14,11 +14,13 @@ import (
 	"github.com/go-chi/cors"
 )
 
-func setUpMiddlewares(r *chi.Mux) error {
+func setUpMiddlewares(r *chi.Mux, apiCfg *apiconf.ApiConfig) error {
 	if r == nil {
 		return errors.New("please provide a router")
 	}
 	r.Use(apiconf.Logger)
+	r.Use(apiconf.ApiConfigure(apiCfg))
+	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.ContentCharset("UTF-8", "Latin-1"))
 	r.Use(middleware.AllowContentType("application/json", "text/xml"))
@@ -31,7 +33,6 @@ func setUpMiddlewares(r *chi.Mux) error {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 	r.Use(middleware.StripSlashes)
-	r.Use(middleware.Recoverer)
 	return nil
 }
 
@@ -39,7 +40,6 @@ func routeSetup(r *chi.Mux) error {
 	if r == nil {
 		return errors.New("please provide a router")
 	}
-
 	// auth api setup
 	r.Mount("/auth", auth_bp.NewRouter())
 	// user api setup
@@ -55,7 +55,11 @@ func main() {
 
 	// router setup
 	mainRouter := chi.NewRouter()
-	err := setUpMiddlewares(mainRouter)
+	apiCfg := apiconf.ApiConfig{
+		DBUrl: apiconf.DBUrlConfig(),
+	}
+
+	err := setUpMiddlewares(mainRouter, &apiCfg)
 	if err != nil {
 		panic(fmt.Sprintf("Error: could not setup middlewares: %v", err))
 	}
