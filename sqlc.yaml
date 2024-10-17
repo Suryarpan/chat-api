@@ -10,5 +10,10 @@ sql:
         emit_prepared_queries: true
         emit_json_tags: true
         json_tags_case_style: "snake"
+        overrides:
+          - db_type: "pg_catalog.timestamp"
+            go_type:
+              import: "time"
+              type: "Time"
     database:
-      uri: postgresql://tester:${PG_PASSWORD}@127.0.0.1:5432/chat_api?sslmode=disable
+      uri: ${CHAT_API_DB_URL}

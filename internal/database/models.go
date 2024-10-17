@@ -5,16 +5,19 @@
 package database
 
 import (
+	"time"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type User struct {
-	ID           pgtype.UUID      `json:"id"`
+	PvtID        int32            `json:"pvt_id"`
+	UserID       pgtype.UUID      `json:"user_id"`
 	Username     string           `json:"username"`
 	DisplayName  string           `json:"display_name"`
 	Password     []byte           `json:"password"`
 	PasswordSalt []byte           `json:"password_salt"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
+	CreatedAt    time.Time        `json:"created_at"`
+	UpdatedAt    time.Time        `json:"updated_at"`
 	LastLoggedIn pgtype.Timestamp `json:"last_logged_in"`
 }

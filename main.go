@@ -12,14 +12,18 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func setUpMiddlewares(r *chi.Mux, apiCfg *apiconf.ApiConfig) error {
+func setUpMiddlewares(r *chi.Mux, cp *pgxpool.Pool) error {
 	if r == nil {
 		return errors.New("please provide a router")
+	} else if cp == nil {
+		return errors.New("please provide a connection pool")
 	}
+	
 	r.Use(apiconf.Logger)
-	r.Use(apiconf.ApiConfigure(apiCfg))
+	r.Use(apiconf.ApiConfigure(cp))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.ContentCharset("UTF-8", "Latin-1"))
@@ -52,14 +56,17 @@ func routeSetup(r *chi.Mux) error {
 func main() {
 	logger := slog.New(*apiconf.LoggerConfig())
 	slog.SetDefault(logger)
+	// DB Setup
+	connPool, err := apiconf.SetupPool()
+	if err != nil {
+		panic(fmt.Sprintf("Error: could not create connection pool: %v", err))
+	}
+	defer connPool.Close()
 
 	// router setup
 	mainRouter := chi.NewRouter()
-	apiCfg := apiconf.ApiConfig{
-		DBUrl: apiconf.DBUrlConfig(),
-	}
 
-	err := setUpMiddlewares(mainRouter, &apiCfg)
+	err = setUpMiddlewares(mainRouter, connPool)
 	if err != nil {
 		panic(fmt.Sprintf("Error: could not setup middlewares: %v", err))
 	}

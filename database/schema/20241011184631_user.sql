@@ -1,7 +1,8 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE users (
-    id UUID PRIMARY KEY,
+    pvt_id SERIAL PRIMARY KEY,
+    user_id UUID UNIQUE NOT NULL,
     username VARCHAR(50) UNIQUE NOT NULL,
     display_name VARCHAR(150) NOT NULL,
     password BYTEA NOT NULL,
