@@ -4,3 +4,9 @@ INSERT INTO users (
 ) VALUES (
     gen_random_uuid(), $1, $2, $3, $4, $5, $6, NULL
 ) RETURNING *;
+
+-- name: GetUserByUuid :one
+SELECT * FROM users WHERE user_id = $1;
+
+-- name: GetUserByName :one
+SELECT * FROM users WHERE username = $1;

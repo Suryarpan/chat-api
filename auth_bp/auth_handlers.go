@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/Suryarpan/chat-api/internal/apiconf"
@@ -66,6 +67,13 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	password := saltyPassword([]byte(ru.Password), passwordSalt)
 
 	queries := database.New(apiCfg.ConnPool)
+	_, err = queries.GetUserByName(r.Context(), ru.Username)
+	if err != nil {
+		field, _ := reflect.TypeOf(ru).FieldByName("Username")
+		render.RespondFailure(w, 400, map[string]string{field.Tag.Get("json"): "already exists"})
+		return
+	}
+
 	user, err := queries.CreateUser(r.Context(), database.CreateUserParams{
 		Username:     ru.Username,
 		DisplayName:  ru.DisplayName,
@@ -76,14 +84,10 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
-		var mssg = "somthing went wrong while creating user"
 		if errors.As(err, &pgErr) {
-			switch pgErr.Code {
-			case "23505":
-				mssg = "provided username is already in use"
-			}
+			slog.Error("could not create user", "error", pgErr.Message, "code", pgErr.Code, "constraint", pgErr.ConstraintName)
 		}
-		render.RespondFailure(w, 400, mssg)
+		render.RespondFailure(w, 500, "somthing went wrong while creating user")
 		return
 	}
 

@@ -8,6 +8,8 @@ package database
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -36,6 +38,48 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
+	var i User
+	err := row.Scan(
+		&i.PvtID,
+		&i.UserID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Password,
+		&i.PasswordSalt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastLoggedIn,
+	)
+	return i, err
+}
+
+const getUserByName = `-- name: GetUserByName :one
+SELECT pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in FROM users WHERE username = $1
+`
+
+func (q *Queries) GetUserByName(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByName, username)
+	var i User
+	err := row.Scan(
+		&i.PvtID,
+		&i.UserID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Password,
+		&i.PasswordSalt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastLoggedIn,
+	)
+	return i, err
+}
+
+const getUserByUuid = `-- name: GetUserByUuid :one
+SELECT pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in FROM users WHERE user_id = $1
+`
+
+func (q *Queries) GetUserByUuid(ctx context.Context, userID pgtype.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUuid, userID)
 	var i User
 	err := row.Scan(
 		&i.PvtID,
