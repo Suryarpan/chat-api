@@ -26,8 +26,8 @@ func setUpMiddlewares(r *chi.Mux, cp *pgxpool.Pool) error {
 	r.Use(apiconf.ApiConfigure(cp))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
-	r.Use(middleware.ContentCharset("UTF-8", "Latin-1"))
 	r.Use(middleware.AllowContentType("application/json", "text/xml"))
+	r.Use(middleware.ContentCharset("", "UTF-8", "Latin-1"))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -42,10 +43,18 @@ func SetupPool() (*pgxpool.Pool, error) {
 	return connPool, nil
 }
 
+func setupValidator() *validator.Validate {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	validate.RegisterTagNameFunc(func(field reflect.StructField) string {
+		return field.Tag.Get("json")
+	})
+	return validate
+}
+
 func ApiConfigure(connPool *pgxpool.Pool) func(http.Handler) http.Handler {
 	apiCfg := ApiConfig{
 		ConnPool: connPool,
-		Validate: validator.New(validator.WithRequiredStructEnabled()),
+		Validate: setupValidator(),
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -21,7 +21,7 @@ import (
 )
 
 func saltyPassword(password, salt []byte) []byte {
-	iterations := 600_000
+	iterations := 10_000
 	hashed := pbkdf2.Key(password, salt, iterations, 512, sha256.New)
 	return hashed
 }
@@ -32,7 +32,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
-type registerUser struct {
+type RegisterUser struct {
 	Username        string `json:"username" validate:"required,min=5,max=50"`
 	DisplayName     string `json:"display_name" validate:"required,min=5,max=150"`
 	Password        string `json:"password" validate:"required,printascii,min=8,eqfield=ConfirmPassword"`
@@ -40,7 +40,7 @@ type registerUser struct {
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	ru := registerUser{}
+	ru := RegisterUser{}
 	reader := json.NewDecoder(r.Body)
 	reader.Decode(&ru)
 
@@ -57,6 +57,15 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	queries := database.New(apiCfg.ConnPool)
+	_, err = queries.GetUserByName(r.Context(), ru.Username)
+	if err == nil {
+		slog.Warn("error while searching DB", "error", err)
+		field, _ := reflect.TypeOf(ru).FieldByName("Username")
+		render.RespondFailure(w, 400, map[string]string{field.Tag.Get("json"): "already exists"})
+		return
+	}
+
 	passwordSalt := make([]byte, 128)
 	_, err = rand.Read(passwordSalt)
 	if err != nil {
@@ -65,14 +74,6 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	password := saltyPassword([]byte(ru.Password), passwordSalt)
-
-	queries := database.New(apiCfg.ConnPool)
-	_, err = queries.GetUserByName(r.Context(), ru.Username)
-	if err != nil {
-		field, _ := reflect.TypeOf(ru).FieldByName("Username")
-		render.RespondFailure(w, 400, map[string]string{field.Tag.Get("json"): "already exists"})
-		return
-	}
 
 	user, err := queries.CreateUser(r.Context(), database.CreateUserParams{
 		Username:     ru.Username,

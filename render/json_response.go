@@ -2,6 +2,7 @@ package render
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -16,7 +17,7 @@ type errorMsg struct {
 func RespondValidationFailure(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
 	errorMssgs := make(map[string]string)
 	for _, fieldError := range validationErrors {
-		errorMssgs[fieldError.Field()] = fieldError.Error()
+		errorMssgs[fieldError.Field()] = fmt.Sprintf("failed on %s with value '%s'", fieldError.ActualTag(), fieldError.Value())
 	}
 	RespondFailure(w, 400, errorMssgs)
 }
