@@ -32,7 +32,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
-type RegisterUser struct {
+type registerUser struct {
 	Username        string `json:"username" validate:"required,min=5,max=50"`
 	DisplayName     string `json:"display_name" validate:"required,min=5,max=150"`
 	Password        string `json:"password" validate:"required,printascii,min=8,eqfield=ConfirmPassword"`
@@ -40,7 +40,7 @@ type RegisterUser struct {
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	ru := RegisterUser{}
+	ru := registerUser{}
 	reader := json.NewDecoder(r.Body)
 	reader.Decode(&ru)
 

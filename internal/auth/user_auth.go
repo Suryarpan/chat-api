@@ -21,7 +21,7 @@ func DbUserToUserData(u database.User) UserData {
 		UserName:    u.Username,
 		DisplayName: u.DisplayName,
 		CreatedAt:   u.CreatedAt,
-		ExpriyTime:  time.Hour * 24,
+		ExpriyTime:  time.Hour * 24 / time.Second,
 	}
 }
 
