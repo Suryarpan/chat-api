@@ -62,7 +62,14 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		render.RespondFailure(w, http.StatusBadRequest, "username or password is invalid")
 		return
 	}
-
+	userData := auth.DbUserToUserData(user)
+	token, err := auth.UserToToken(&userData)
+	if err != nil {
+		render.RespondFailure(w, http.StatusInternalServerError, TokenGenerationErrorMssg)
+		return
+	}
+	w.Header().Set(auth.UserAuthHeader, token)
+	render.RespondSuccess(w, 204, "")
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {

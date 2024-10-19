@@ -9,6 +9,7 @@ import (
 
 	"github.com/Suryarpan/chat-api/auth_bp"
 	"github.com/Suryarpan/chat-api/internal/apiconf"
+	"github.com/Suryarpan/chat-api/internal/auth"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -24,6 +25,7 @@ func setUpMiddlewares(r *chi.Mux, cp *pgxpool.Pool) error {
 	
 	r.Use(apiconf.Logger)
 	r.Use(apiconf.ApiConfigure(cp))
+	r.Use(auth.Authentication)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.AllowContentType("application/json", "text/xml"))
