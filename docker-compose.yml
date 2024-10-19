@@ -5,8 +5,8 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ${PWD}/data/pgdata:/var/lib/pgsql/data
-      - ${PWD}/data/logs:/var/lib/pgsql/pg_wal
+      - ${PWD}/_data/pgdata:/var/lib/pgsql/data
+      - ${PWD}/_data/logs:/var/lib/pgsql/pg_wal
     environment:
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}

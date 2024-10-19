@@ -28,4 +28,4 @@ go.work.sum
 .env
 
 # data dir
-data/
+_data/
