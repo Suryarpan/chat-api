@@ -3,11 +3,11 @@ package auth_bp
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
-	"reflect"
 	"time"
 
 	"github.com/Suryarpan/chat-api/internal/apiconf"
@@ -26,13 +26,49 @@ func saltyPassword(password, salt []byte) []byte {
 	return hashed
 }
 
+type loginUserData struct {
+	Username string `json:"username" validate:"required,min=5,max=50"`
+	Password string `json:"password" validate:"required,printascii,min=8"`
+}
+
 func handleLogin(w http.ResponseWriter, r *http.Request) {
+	lu := loginUserData{}
+	reader := json.NewDecoder(r.Body)
+	reader.Decode(&lu)
+
+	apiCfg := apiconf.GetConfig(r)
+
+	err := apiCfg.Validate.Struct(lu)
+
+	if err != nil {
+		validationError, ok := err.(validator.ValidationErrors)
+		if !ok {
+			slog.Error("error with validator definition", "error", err)
+			render.RespondFailure(w, http.StatusInternalServerError, InternalServerErrorMssg)
+		} else {
+			render.RespondValidationFailure(w, validationError)
+		}
+		return
+	}
+
+	queries := database.New(apiCfg.ConnPool)
+	user, err := queries.GetUserByName(r.Context(), lu.Username)
+	if err != nil {
+		render.RespondFailure(w, http.StatusBadRequest, "username or password is invalid")
+		return
+	}
+	hashedPassword := saltyPassword([]byte(lu.Password), user.PasswordSalt)
+	if subtle.ConstantTimeCompare(hashedPassword, user.Password) != 1 {
+		render.RespondFailure(w, http.StatusBadRequest, "username or password is invalid")
+		return
+	}
+
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
-type registerUser struct {
+type registerUserData struct {
 	Username        string `json:"username" validate:"required,min=5,max=50"`
 	DisplayName     string `json:"display_name" validate:"required,min=5,max=150"`
 	Password        string `json:"password" validate:"required,printascii,min=8,eqfield=ConfirmPassword"`
@@ -40,41 +76,40 @@ type registerUser struct {
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	ru := registerUser{}
+	ru := registerUserData{}
 	reader := json.NewDecoder(r.Body)
 	reader.Decode(&ru)
 
 	apiCfg := apiconf.GetConfig(r)
+	// validate incoming data
 	err := apiCfg.Validate.Struct(ru)
 	if err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if !ok {
 			slog.Error("error with validator definition", "error", err)
-			render.RespondFailure(w, 500, "could not process request at this time")
+			render.RespondFailure(w, http.StatusInternalServerError, InternalServerErrorMssg)
 		} else {
 			render.RespondValidationFailure(w, validationErrors)
 		}
 		return
 	}
-
+	// check user name with DB
 	queries := database.New(apiCfg.ConnPool)
 	_, err = queries.GetUserByName(r.Context(), ru.Username)
 	if err == nil {
 		slog.Warn("error while searching DB", "error", err)
-		field, _ := reflect.TypeOf(ru).FieldByName("Username")
-		render.RespondFailure(w, 400, map[string]string{field.Tag.Get("json"): "already exists"})
+		render.RespondFailure(w, http.StatusBadRequest, map[string]string{"username": "already exists"})
 		return
 	}
-
+	// generate the password hash
 	passwordSalt := make([]byte, 128)
 	_, err = rand.Read(passwordSalt)
 	if err != nil {
-		render.RespondFailure(w, 500, "server cannot store the password at this moment")
+		render.RespondFailure(w, http.StatusInsufficientStorage, InsufficientStorageErrorMssg)
 		return
 	}
-
 	password := saltyPassword([]byte(ru.Password), passwordSalt)
-
+	// store in DB
 	user, err := queries.CreateUser(r.Context(), database.CreateUserParams{
 		Username:     ru.Username,
 		DisplayName:  ru.DisplayName,
@@ -86,14 +121,19 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			slog.Error("could not create user", "error", pgErr.Message, "code", pgErr.Code, "constraint", pgErr.ConstraintName)
+			slog.Error(
+				"could not create user",
+				"error", pgErr.Message,
+				"code", pgErr.Code,
+				"constraint", pgErr.ConstraintName,
+			)
 		}
-		render.RespondFailure(w, 500, "somthing went wrong while creating user")
+		render.RespondFailure(w, http.StatusInsufficientStorage, InsufficientStorageErrorMssg)
 		return
 	}
-
+	// send back user data
 	cleanUser := auth.DbUserToUserData(user)
-	render.RespondSuccess(w, 201, cleanUser)
+	render.RespondSuccess(w, http.StatusCreated, cleanUser)
 }
 
 func NewRouter() *chi.Mux {
