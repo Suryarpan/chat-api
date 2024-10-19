@@ -1,0 +1,15 @@
+services:
+  postgres-db:
+    image: "postgres:17"
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ${PWD}/data/pgdata:/var/lib/pgsql/data
+      - ${PWD}/data/logs:/var/lib/pgsql/pg_wal
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+      PGDATA: /var/lib/pgsql/data
+      POSTGRES_INITDB_WALDIR: /var/lib/pgsql/pg_wal
