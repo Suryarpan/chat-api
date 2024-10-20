@@ -39,7 +39,7 @@ func RespondFailure(w http.ResponseWriter, code int, msg interface{}) {
 }
 
 func RespondSuccess(w http.ResponseWriter, code int, obj interface{}) {
-	w.Header().Set("content-type", "application/json; charset=UTF-8")
+	w.Header().Set("content-type", "application/json;charset=UTF-8")
 	w.WriteHeader(code)
 	if code == http.StatusNoContent {
 		w.Write([]byte(""))

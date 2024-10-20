@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -35,6 +36,14 @@ func saltyPassword(password, salt []byte) []byte {
 type loginUserData struct {
 	Username string `json:"username" validate:"required,min=5,max=50"`
 	Password string `json:"password" validate:"required,printascii,min=8"`
+}
+
+type loginResponse struct {
+	Token        string           `json:"token"`
+	TokenType    string           `json:"token_type"`
+	Username     string           `json:"username"`
+	DisplayName  string           `json:"display_name"`
+	LastLoggedIn pgtype.Timestamp `json:"last_logged_in"`
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -68,14 +77,30 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		render.RespondFailure(w, http.StatusBadRequest, "username or password is invalid")
 		return
 	}
-	userData := auth.DbUserToUserData(user)
-	token, err := auth.UserToToken(&userData)
+
+	err = queries.UpdateLoggedInTime(r.Context(), database.UpdateLoggedInTimeParams{
+		LastLoggedIn: pgtype.Timestamp{
+			Time:  time.Now().UTC(),
+			Valid: true,
+		},
+		PvtID: user.PvtID,
+	})
+	if err != nil {
+		render.RespondFailure(w, http.StatusInsufficientStorage, tokenGenerationErrorMssg)
+	}
+
+	token, err := auth.UserToToken(user)
 	if err != nil {
 		render.RespondFailure(w, http.StatusInternalServerError, tokenGenerationErrorMssg)
 		return
 	}
-	w.Header().Set(auth.UserAuthHeader, token)
-	render.RespondSuccess(w, 204, "")
+	render.RespondSuccess(w, 200, loginResponse{
+		Token:        token,
+		TokenType:    auth.TokenPrefix,
+		Username:     user.Username,
+		DisplayName:  user.DisplayName,
+		LastLoggedIn: user.LastLoggedIn,
+	})
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +111,13 @@ type registerUserData struct {
 	DisplayName     string `json:"display_name" validate:"required,min=5,max=150"`
 	Password        string `json:"password" validate:"required,printascii,min=8,eqfield=ConfirmPassword"`
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
+}
+
+type registerResponse struct {
+	UserId      pgtype.UUID `json:"user_id"`
+	Username    string      `json:"username"`
+	DisplayName string      `json:"display_name"`
+	CreatedAt   time.Time   `json:"created_at"`
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -110,8 +142,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	queries := database.New(apiCfg.ConnPool)
 	_, err = queries.GetUserByName(r.Context(), ru.Username)
 	if err == nil {
-		slog.Warn("error while searching DB", "error", err)
-		render.RespondFailure(w, http.StatusBadRequest, map[string]string{"username": "already exists"})
+		render.RespondFailure(w, http.StatusNotAcceptable, map[string]string{"username": "already exists"})
 		return
 	}
 	// generate the password hash
@@ -145,8 +176,12 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// send back user data
-	cleanUser := auth.DbUserToUserData(user)
-	render.RespondSuccess(w, http.StatusCreated, cleanUser)
+	render.RespondSuccess(w, http.StatusCreated, registerResponse{
+		UserId:      user.UserID,
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		CreatedAt:   user.CreatedAt,
+	})
 }
 
 func AuthRouter() *chi.Mux {

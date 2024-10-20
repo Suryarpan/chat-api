@@ -3,14 +3,13 @@ package auth
 import (
 	"context"
 	"encoding/base64"
-	"net/http"
+	"fmt"
+	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/Suryarpan/chat-api/internal/database"
-	"github.com/Suryarpan/chat-api/render"
-	_ "github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -20,10 +19,14 @@ const (
 	ctxUserDataKey ctxKeyUserData = "CHAT_API_USER_DATA"
 	UserAuthHeader string         = "Authorization"
 	TokenPrefix    string         = "Bearer"
+	TokenIssuer    string         = "chat-api"
+	LenPrefix      int            = len(TokenPrefix + " ")
 )
 
 var (
-	Secret []byte
+	RegularAudience []string = []string{"user"}
+	AdminAudience   []string = []string{"user", "admin"}
+	secret          []byte
 )
 
 func init() {
@@ -31,60 +34,78 @@ func init() {
 	if !ok {
 		panic("Error: could not find CHAT_API_SECRET")
 	}
-	secret, err := base64.StdEncoding.DecodeString(val)
+	sc, err := base64.StdEncoding.DecodeString(val)
 	if err != nil {
 		panic(err)
 	}
-	Secret = secret
+	secret = sc
+}
+
+type TokenData struct {
+	jwt.RegisteredClaims
+	UserId pgtype.UUID `json:"uid"`
 }
 
 type UserData struct {
-	UserId      pgtype.UUID   `json:"user_id"`
-	UserName    string        `json:"user_name"`
-	DisplayName string        `json:"display_name"`
-	CreatedAt   time.Time     `json:"created_at"`
-	ExpriyTime  time.Duration `json:"expiry_time"`
+	PvtId    int32
+	UserId   pgtype.UUID
+	UserName string
 }
 
-func DbUserToUserData(u database.User) UserData {
-	return UserData{
-		UserId:      u.UserID,
-		UserName:    u.Username,
-		DisplayName: u.DisplayName,
-		CreatedAt:   u.CreatedAt,
-		ExpriyTime:  time.Hour * 24 / time.Second,
-	}
-}
-
-func UserToToken(u *UserData) (string, error) {
-	// jwt.NewWithClaims()
-	return "", nil
-}
-
-func TokenToUser(s string, secret []byte) (*UserData, error) {
-	return nil, nil
-}
-
-func Authentication(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get(UserAuthHeader)
-		parts := strings.Split(token, " ")
-		mssg := "please authenticate before proceeding"
-		if len(parts) != 2 {
-			render.RespondFailure(w, http.StatusUnauthorized, mssg)
-			return
-		} else if parts[0] != TokenPrefix {
-			render.RespondFailure(w, http.StatusUnauthorized, mssg)
-			return
-		}
-		data, err := TokenToUser(parts[1], Secret)
-		if err != nil {
-			render.RespondFailure(w, http.StatusUnauthorized, mssg)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), ctxUserDataKey, data)
-		rr := r.WithContext(ctx)
-		next.ServeHTTP(w, rr)
+func GetUserData(ctx context.Context, queries database.Queries, t TokenData) (UserData, error) {
+	user, err := queries.GetUserByNameAndUuid(ctx, database.GetUserByNameAndUuidParams{
+		UserID:   t.UserId,
+		Username: t.Subject,
 	})
+	if err != nil {
+		return UserData{}, err
+	}
+	return UserData{
+		PvtId:    user.PvtID,
+		UserId:   user.UserID,
+		UserName: user.Username,
+	}, nil
+}
+
+func UserToToken(u database.User) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS384, TokenData{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Audience:  RegularAudience,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24).UTC()),
+			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+			NotBefore: jwt.NewNumericDate(time.Now().UTC()),
+			Issuer:    TokenIssuer,
+			Subject:   u.Username,
+		},
+		UserId: u.UserID,
+	})
+	return token.SignedString(secret)
+}
+
+func TokenToUser(s string, secret []byte) (*TokenData, error) {
+	token, err := jwt.ParseWithClaims(
+		s,
+		&TokenData{},
+		func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
+			return secret, nil
+		},
+		jwt.WithAudience("user"),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithIssuer("chat-api"),
+		jwt.WithLeeway(time.Second*10),
+		jwt.WithJSONNumber(),
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS384.Name}),
+	)
+	if err != nil {
+		slog.Warn("invalid token encountered", "error", err)
+		return nil, err
+	}
+	if claims, ok := token.Claims.(*TokenData); ok {
+		return claims, nil
+	}
+	return nil, fmt.Errorf("unknown claims type")
 }

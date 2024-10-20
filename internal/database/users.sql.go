@@ -54,7 +54,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByName = `-- name: GetUserByName :one
-SELECT pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in FROM users WHERE username = $1
+SELECT pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in
+FROM users
+WHERE username = $1
 `
 
 func (q *Queries) GetUserByName(ctx context.Context, username string) (User, error) {
@@ -74,8 +76,38 @@ func (q *Queries) GetUserByName(ctx context.Context, username string) (User, err
 	return i, err
 }
 
+const getUserByNameAndUuid = `-- name: GetUserByNameAndUuid :one
+SELECT pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in
+FROM users
+WHERE user_id = $1 AND username = $2
+`
+
+type GetUserByNameAndUuidParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	Username string      `json:"username"`
+}
+
+func (q *Queries) GetUserByNameAndUuid(ctx context.Context, arg GetUserByNameAndUuidParams) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByNameAndUuid, arg.UserID, arg.Username)
+	var i User
+	err := row.Scan(
+		&i.PvtID,
+		&i.UserID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Password,
+		&i.PasswordSalt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastLoggedIn,
+	)
+	return i, err
+}
+
 const getUserByUuid = `-- name: GetUserByUuid :one
-SELECT pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in FROM users WHERE user_id = $1
+SELECT pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in
+FROM users
+WHERE user_id = $1
 `
 
 func (q *Queries) GetUserByUuid(ctx context.Context, userID pgtype.UUID) (User, error) {
@@ -93,4 +125,20 @@ func (q *Queries) GetUserByUuid(ctx context.Context, userID pgtype.UUID) (User, 
 		&i.LastLoggedIn,
 	)
 	return i, err
+}
+
+const updateLoggedInTime = `-- name: UpdateLoggedInTime :exec
+UPDATE users
+SET last_logged_in = $1
+WHERE pvt_id = $2
+`
+
+type UpdateLoggedInTimeParams struct {
+	LastLoggedIn pgtype.Timestamp `json:"last_logged_in"`
+	PvtID        int32            `json:"pvt_id"`
+}
+
+func (q *Queries) UpdateLoggedInTime(ctx context.Context, arg UpdateLoggedInTimeParams) error {
+	_, err := q.db.Exec(ctx, updateLoggedInTime, arg.LastLoggedIn, arg.PvtID)
+	return err
 }

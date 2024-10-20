@@ -6,7 +6,21 @@ INSERT INTO users (
 ) RETURNING *;
 
 -- name: GetUserByUuid :one
-SELECT * FROM users WHERE user_id = $1;
+SELECT *
+FROM users
+WHERE user_id = $1;
 
 -- name: GetUserByName :one
-SELECT * FROM users WHERE username = $1;
+SELECT *
+FROM users
+WHERE username = $1;
+
+-- name: GetUserByNameAndUuid :one
+SELECT *
+FROM users
+WHERE user_id = $1 AND username = $2;
+
+-- name: UpdateLoggedInTime :exec
+UPDATE users
+SET last_logged_in = $1
+WHERE pvt_id = $2;
