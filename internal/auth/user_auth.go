@@ -13,15 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type ctxKeyUserData string
-
-const (
-	ctxUserDataKey ctxKeyUserData = "CHAT_API_USER_DATA"
-	UserAuthHeader string         = "Authorization"
-	TokenPrefix    string         = "Bearer"
-	TokenIssuer    string         = "chat-api"
-	LenPrefix      int            = len(TokenPrefix + " ")
-)
+const TokenIssuer string = "chat-api"
 
 var (
 	RegularAudience []string = []string{"user"}
@@ -29,19 +21,20 @@ var (
 	secret          []byte
 )
 
-func init() {
+func SetupAuth() error {
 	val, ok := os.LookupEnv("CHAT_API_SECRET")
 	if !ok {
-		panic("Error: could not find CHAT_API_SECRET")
+		return fmt.Errorf("could not find CHAT_API_SECRET")
 	}
 	sc, err := base64.StdEncoding.DecodeString(val)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	secret = sc
+	return nil
 }
 
-type TokenData struct {
+type tokenData struct {
 	jwt.RegisteredClaims
 	UserId pgtype.UUID `json:"uid"`
 }
@@ -52,7 +45,7 @@ type UserData struct {
 	UserName string
 }
 
-func GetUserData(ctx context.Context, queries database.Queries, t TokenData) (UserData, error) {
+func getUserData(ctx context.Context, queries *database.Queries, t *tokenData) (UserData, error) {
 	user, err := queries.GetUserByNameAndUuid(ctx, database.GetUserByNameAndUuidParams{
 		UserID:   t.UserId,
 		Username: t.Subject,
@@ -68,7 +61,7 @@ func GetUserData(ctx context.Context, queries database.Queries, t TokenData) (Us
 }
 
 func UserToToken(u database.User) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS384, TokenData{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS384, tokenData{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Audience:  RegularAudience,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24).UTC()),
@@ -82,10 +75,10 @@ func UserToToken(u database.User) (string, error) {
 	return token.SignedString(secret)
 }
 
-func TokenToUser(s string, secret []byte) (*TokenData, error) {
+func tokenToUser(s string, secret []byte) (*tokenData, error) {
 	token, err := jwt.ParseWithClaims(
 		s,
-		&TokenData{},
+		&tokenData{},
 		func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -104,7 +97,7 @@ func TokenToUser(s string, secret []byte) (*TokenData, error) {
 		slog.Warn("invalid token encountered", "error", err)
 		return nil, err
 	}
-	if claims, ok := token.Claims.(*TokenData); ok {
+	if claims, ok := token.Claims.(*tokenData); ok {
 		return claims, nil
 	}
 	return nil, fmt.Errorf("unknown claims type")

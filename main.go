@@ -24,7 +24,6 @@ func setUpMiddlewares(r *chi.Mux, cp *pgxpool.Pool) error {
 
 	r.Use(apiconf.Logger)
 	r.Use(apiconf.ApiConfigure(cp))
-	r.Use(auth.Authentication)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.AllowContentType("application/json", "text/xml"))
@@ -63,6 +62,11 @@ func main() {
 		panic(fmt.Sprintf("Error: could not create connection pool: %v", err))
 	}
 	defer connPool.Close()
+	// Auth Setup
+	err = auth.SetupAuth()
+	if err != nil {
+		panic(fmt.Sprintf("Error: could not setup auth: %v", err))
+	}
 
 	// router setup
 	mainRouter := chi.NewRouter()

@@ -103,9 +103,6 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func handleLogout(w http.ResponseWriter, r *http.Request) {
-}
-
 type registerUserData struct {
 	Username        string `json:"username" validate:"required,min=5,max=50"`
 	DisplayName     string `json:"display_name" validate:"required,min=5,max=150"`
@@ -189,7 +186,6 @@ func AuthRouter() *chi.Mux {
 
 	authRouter.Post("/login", handleLogin)
 	authRouter.Post("/register", handleRegister)
-	authRouter.Post("/logout", handleLogout)
 
 	return authRouter
 }
