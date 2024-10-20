@@ -1,4 +1,4 @@
-package auth_bp
+package main
 
 import (
 	"crypto/rand"
@@ -18,6 +18,12 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/pbkdf2"
+)
+
+const (
+	internalServerErrorMssg      = "could not process request at this time"
+	insufficientStorageErrorMssg = "could not create user at this moment"
+	tokenGenerationErrorMssg     = "could not login user at this time"
 )
 
 func saltyPassword(password, salt []byte) []byte {
@@ -44,7 +50,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		validationError, ok := err.(validator.ValidationErrors)
 		if !ok {
 			slog.Error("error with validator definition", "error", err)
-			render.RespondFailure(w, http.StatusInternalServerError, InternalServerErrorMssg)
+			render.RespondFailure(w, http.StatusInternalServerError, internalServerErrorMssg)
 		} else {
 			render.RespondValidationFailure(w, validationError)
 		}
@@ -65,7 +71,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	userData := auth.DbUserToUserData(user)
 	token, err := auth.UserToToken(&userData)
 	if err != nil {
-		render.RespondFailure(w, http.StatusInternalServerError, TokenGenerationErrorMssg)
+		render.RespondFailure(w, http.StatusInternalServerError, tokenGenerationErrorMssg)
 		return
 	}
 	w.Header().Set(auth.UserAuthHeader, token)
@@ -94,7 +100,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if !ok {
 			slog.Error("error with validator definition", "error", err)
-			render.RespondFailure(w, http.StatusInternalServerError, InternalServerErrorMssg)
+			render.RespondFailure(w, http.StatusInternalServerError, internalServerErrorMssg)
 		} else {
 			render.RespondValidationFailure(w, validationErrors)
 		}
@@ -112,7 +118,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	passwordSalt := make([]byte, 128)
 	_, err = rand.Read(passwordSalt)
 	if err != nil {
-		render.RespondFailure(w, http.StatusInsufficientStorage, InsufficientStorageErrorMssg)
+		render.RespondFailure(w, http.StatusInsufficientStorage, insufficientStorageErrorMssg)
 		return
 	}
 	password := saltyPassword([]byte(ru.Password), passwordSalt)
@@ -135,7 +141,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 				"constraint", pgErr.ConstraintName,
 			)
 		}
-		render.RespondFailure(w, http.StatusInsufficientStorage, InsufficientStorageErrorMssg)
+		render.RespondFailure(w, http.StatusInsufficientStorage, insufficientStorageErrorMssg)
 		return
 	}
 	// send back user data
