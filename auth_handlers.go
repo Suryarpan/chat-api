@@ -149,7 +149,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	render.RespondSuccess(w, http.StatusCreated, cleanUser)
 }
 
-func NewRouter() *chi.Mux {
+func AuthRouter() *chi.Mux {
 	authRouter := chi.NewRouter()
 
 	authRouter.Post("/login", handleLogin)

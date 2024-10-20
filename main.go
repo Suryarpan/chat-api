@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Suryarpan/chat-api/auth_bp"
 	"github.com/Suryarpan/chat-api/internal/apiconf"
 	"github.com/Suryarpan/chat-api/internal/auth"
 	"github.com/go-chi/chi/v5"
@@ -22,7 +21,7 @@ func setUpMiddlewares(r *chi.Mux, cp *pgxpool.Pool) error {
 	} else if cp == nil {
 		return errors.New("please provide a connection pool")
 	}
-	
+
 	r.Use(apiconf.Logger)
 	r.Use(apiconf.ApiConfigure(cp))
 	r.Use(auth.Authentication)
@@ -47,7 +46,7 @@ func routeSetup(r *chi.Mux) error {
 		return errors.New("please provide a router")
 	}
 	// auth api setup
-	r.Mount("/auth", auth_bp.NewRouter())
+	r.Mount("/auth", AuthRouter())
 	// user api setup
 	// chat data setup
 	// admin setup
