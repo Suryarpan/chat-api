@@ -9,6 +9,7 @@ This is an experimental chat api built in go. Following features are available i
 1. [ ] CRUD on messages
 1. [ ] CRUD on User groups
 1. [ ] CRUD on group messages
+1. [ ] Admin related operations
 
 ## Tech Stack
 
