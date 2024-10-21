@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"log/slog"
@@ -11,6 +12,7 @@ import (
 	"github.com/Suryarpan/chat-api/internal/database"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 const TokenIssuer string = "chat-api"
@@ -32,6 +34,12 @@ func SetupAuth() error {
 	}
 	secret = sc
 	return nil
+}
+
+func SaltyPassword(password, salt []byte) []byte {
+	iterations := 10_000
+	hashed := pbkdf2.Key(password, salt, iterations, 512, sha256.New)
+	return hashed
 }
 
 type tokenData struct {

@@ -20,6 +20,11 @@ SELECT *
 FROM users
 WHERE user_id = $1 AND username = $2;
 
+-- name: GetUserById :one
+SELECT *
+FROM users
+WHERE pvt_id = $1;
+
 -- name: UpdateLoggedInTime :exec
 UPDATE users
 SET last_logged_in = $1

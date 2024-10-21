@@ -47,9 +47,9 @@ func routeSetup(r *chi.Mux) error {
 	// auth api setup
 	r.Mount("/auth", AuthRouter())
 	// user api setup
+	r.Mount("/user", UserRouter())
 	// chat data setup
 	// admin setup
-	// router run
 	return nil
 }
 
