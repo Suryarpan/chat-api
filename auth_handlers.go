@@ -82,7 +82,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		render.RespondFailure(w, http.StatusInternalServerError, tokenGenerationErrorMssg)
 		return
 	}
-	render.RespondSuccess(w, 200, loginResponse{
+	render.RespondSuccess(w, http.StatusOK, loginResponse{
 		Token:        token,
 		TokenType:    auth.TokenPrefix,
 		Username:     user.Username,
