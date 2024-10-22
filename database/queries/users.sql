@@ -29,3 +29,15 @@ WHERE pvt_id = $1;
 UPDATE users
 SET last_logged_in = $1
 WHERE pvt_id = $2;
+
+-- name: UpdateUserDetails :one
+UPDATE users
+SET username = $1, display_name = $2, password = $3, updated_at = $4
+WHERE pvt_id = $5
+RETURNING *;
+
+-- name: DeleteUserDetails :one
+DELETE
+FROM users
+WHERE pvt_id = $1
+RETURNING *;

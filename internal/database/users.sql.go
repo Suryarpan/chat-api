@@ -53,6 +53,30 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteUserDetails = `-- name: DeleteUserDetails :one
+DELETE
+FROM users
+WHERE pvt_id = $1
+RETURNING pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in
+`
+
+func (q *Queries) DeleteUserDetails(ctx context.Context, pvtID int32) (User, error) {
+	row := q.db.QueryRow(ctx, deleteUserDetails, pvtID)
+	var i User
+	err := row.Scan(
+		&i.PvtID,
+		&i.UserID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Password,
+		&i.PasswordSalt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastLoggedIn,
+	)
+	return i, err
+}
+
 const getUserById = `-- name: GetUserById :one
 SELECT pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in
 FROM users
@@ -164,4 +188,42 @@ type UpdateLoggedInTimeParams struct {
 func (q *Queries) UpdateLoggedInTime(ctx context.Context, arg UpdateLoggedInTimeParams) error {
 	_, err := q.db.Exec(ctx, updateLoggedInTime, arg.LastLoggedIn, arg.PvtID)
 	return err
+}
+
+const updateUserDetails = `-- name: UpdateUserDetails :one
+UPDATE users
+SET username = $1, display_name = $2, password = $3, updated_at = $4
+WHERE pvt_id = $5
+RETURNING pvt_id, user_id, username, display_name, password, password_salt, created_at, updated_at, last_logged_in
+`
+
+type UpdateUserDetailsParams struct {
+	Username    string    `json:"username"`
+	DisplayName string    `json:"display_name"`
+	Password    []byte    `json:"password"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	PvtID       int32     `json:"pvt_id"`
+}
+
+func (q *Queries) UpdateUserDetails(ctx context.Context, arg UpdateUserDetailsParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserDetails,
+		arg.Username,
+		arg.DisplayName,
+		arg.Password,
+		arg.UpdatedAt,
+		arg.PvtID,
+	)
+	var i User
+	err := row.Scan(
+		&i.PvtID,
+		&i.UserID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Password,
+		&i.PasswordSalt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastLoggedIn,
+	)
+	return i, err
 }
