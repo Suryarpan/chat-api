@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	internalServerErrorMssg      = "could not process request at this time"
-	insufficientStorageErrorMssg = "could not create user at this moment"
-	tokenGenerationErrorMssg     = "could not login user at this time"
+	internalServerErrorMssg  = "could not process request at this time"
+	tokenGenerationErrorMssg = "could not login user at this time"
 )
 
 type loginUserData struct {

@@ -18,6 +18,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const (
+	insufficientStorageErrorMssg = "could not create user at this moment"
+)
+
 type PublicUserDetails struct {
 	UserID       pgtype.UUID      `json:"user_id"`
 	Username     string           `json:"username"`
@@ -39,25 +43,24 @@ func handleGetUserDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	publicData := PublicUserDetails{
-		UserID:      user.UserID,
-		Username:    user.Username,
-		DisplayName: user.DisplayName,
-		CreatedAt:   user.CreatedAt,
-		UpdatedAt:   user.UpdatedAt,
+		UserID:       user.UserID,
+		Username:     user.Username,
+		DisplayName:  user.DisplayName,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
 		LastLoggedIn: user.LastLoggedIn,
 	}
 	render.RespondSuccess(w, http.StatusOK, publicData)
 }
 
-type registerUserData struct {
-	Username        string `json:"username" validate:"required,min=5,max=50"`
-	DisplayName     string `json:"display_name" validate:"required,min=5,max=150"`
-	Password        string `json:"password" validate:"required,printascii,min=8,eqfield=ConfirmPassword"`
-	ConfirmPassword string `json:"confirm_password" validate:"required"`
+type createUserData struct {
+	Username    string `json:"username" validate:"required,min=5,max=50"`
+	DisplayName string `json:"display_name" validate:"required,min=5,max=150"`
+	Password    string `json:"password" validate:"required,printascii,min=8"`
 }
 
-func handleRegister(w http.ResponseWriter, r *http.Request) {
-	ru := registerUserData{}
+func handleUserCreate(w http.ResponseWriter, r *http.Request) {
+	ru := createUserData{}
 	reader := json.NewDecoder(r.Body)
 	reader.Decode(&ru)
 
@@ -120,11 +123,16 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func UserRouter() *chi.Mux {
 	router := chi.NewMux()
 
 	router.With(auth.Authentication).Get("/", handleGetUserDetail)
-	router.Post("/", handleRegister)
+	router.Post("/", handleUserCreate)
+	router.Patch("/", handleUpdateUser)
 
 	return router
 }
