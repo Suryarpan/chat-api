@@ -47,25 +47,11 @@ type tokenData struct {
 	UserId pgtype.UUID `json:"uid"`
 }
 
-type UserData struct {
-	PvtId    int32
-	UserId   pgtype.UUID
-	UserName string
-}
-
-func getUserData(ctx context.Context, queries *database.Queries, t *tokenData) (UserData, error) {
-	user, err := queries.GetUserByNameAndUuid(ctx, database.GetUserByNameAndUuidParams{
+func getUserData(ctx context.Context, queries *database.Queries, t *tokenData) (database.User, error) {
+	return queries.GetUserByNameAndUuid(ctx, database.GetUserByNameAndUuidParams{
 		UserID:   t.UserId,
 		Username: t.Subject,
 	})
-	if err != nil {
-		return UserData{}, err
-	}
-	return UserData{
-		PvtId:    user.PvtID,
-		UserId:   user.UserID,
-		UserName: user.Username,
-	}, nil
 }
 
 func UserToToken(u database.User) (string, error) {

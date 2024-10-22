@@ -53,8 +53,8 @@ func Authentication(next http.Handler) http.Handler {
 	})
 }
 
-func GetUserData(r *http.Request) UserData {
-	data, ok := r.Context().Value(ctxUserDataKey).(UserData)
+func GetUserData(r *http.Request) database.User {
+	data, ok := r.Context().Value(ctxUserDataKey).(database.User)
 	if !ok {
 		slog.Error("UserDataKey was overwrittten", "user", data)
 		panic("cannot prceed further with corrupted user data")
