@@ -4,7 +4,7 @@ This is an experimental chat api built in go. Following features are available i
 
 1. [x] New user registration
 1. [x] User Authentication using JWT
-1. [ ] CRUD on user
+1. [x] CRUD on user
 1. [ ] Blocklist for users
 1. [ ] CRUD on messages
 1. [ ] CRUD on User groups
