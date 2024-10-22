@@ -50,7 +50,7 @@ func Logger(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(ww, r)
-		
+
 		slog.Info(
 			fmt.Sprintf("%s://%s%s %s", scheme, r.Host, r.RequestURI, r.Proto),
 			"from", r.RemoteAddr,

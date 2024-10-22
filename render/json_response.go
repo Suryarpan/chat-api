@@ -13,13 +13,12 @@ type errorMsg struct {
 	Message interface{} `json:"message"`
 }
 
-
 func RespondValidationFailure(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
 	errorMssgs := make(map[string]string)
 	for _, fieldError := range validationErrors {
 		errorMssgs[fieldError.Field()] = fmt.Sprintf("failed on %s with value '%s'", fieldError.ActualTag(), fieldError.Value())
 	}
-	RespondFailure(w, 400, errorMssgs)
+	RespondFailure(w, http.StatusBadRequest, errorMssgs)
 }
 
 func RespondFailure(w http.ResponseWriter, code int, msg interface{}) {
