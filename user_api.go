@@ -125,6 +125,13 @@ type updateUserData struct {
 	Password    *string `json:"password" validate:"omitnil,printascii,min=8"`
 }
 
+func If[T any](cond bool, vTrue, vFalse T) T {
+	if cond {
+		return vTrue
+	}
+	return vFalse
+}
+
 func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	ud := updateUserData{}
 	decoder := json.NewDecoder(r.Body)
@@ -150,16 +157,9 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// find the updated fields
-	if ud.Password != nil {
-		updatedPassword := auth.SaltyPassword([]byte(*ud.Password), user.PasswordSalt)
-		user.Password = updatedPassword
-	}
-	if ud.Username != nil {
-		user.Username = *ud.Username
-	}
-	if ud.DisplayName != nil {
-		user.DisplayName = *ud.DisplayName
-	}
+	user.Username = If(ud.Username != nil, *ud.Username, user.Username)
+	user.DisplayName = If(ud.DisplayName != nil, *ud.DisplayName, user.DisplayName)
+	user.Password = If(ud.Password != nil, auth.SaltyPassword([]byte(*ud.Password), user.PasswordSalt), user.Password)
 	// update in DB
 	queries := database.New(apiCfg.ConnPool)
 	updUser, err := queries.UpdateUserDetails(r.Context(), database.UpdateUserDetailsParams{
@@ -185,7 +185,7 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		render.RespondFailure(w, http.StatusInternalServerError, "could not delete at this time")
 		return
 	}
-	render.RespondSuccess(w, http.StatusOK, delUser)
+	render.RespondSuccess(w, http.StatusOK, convertToPublicUser(delUser))
 }
 
 func UserRouter() *chi.Mux {
