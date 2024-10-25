@@ -58,11 +58,15 @@ type createUserData struct {
 func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	cu := createUserData{}
 	reader := json.NewDecoder(r.Body)
-	reader.Decode(&cu)
+	err := reader.Decode(&cu)
+	if err != nil {
+		render.RespondFailure(w, 400, "could not decode data")
+		return
+	}
 
 	apiCfg := apiconf.GetConfig(r)
 	// validate incoming data
-	err := apiCfg.Validate.Struct(cu)
+	err = apiCfg.Validate.Struct(cu)
 	if err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if !ok {
@@ -135,7 +139,11 @@ func If[T any](cond bool, vTrue, vFalse T) T {
 func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	ud := updateUserData{}
 	decoder := json.NewDecoder(r.Body)
-	decoder.Decode(&ud)
+	err := decoder.Decode(&ud)
+	if err != nil {
+		render.RespondFailure(w, 400, "could not decode data")
+		return
+	}
 	user := auth.GetUserData(r)
 	// nothing to update
 	emptyData := updateUserData{}
@@ -145,7 +153,7 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	apiCfg := apiconf.GetConfig(r)
 	// validate incoming data
-	err := apiCfg.Validate.Struct(ud)
+	err = apiCfg.Validate.Struct(ud)
 	if err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if !ok {
