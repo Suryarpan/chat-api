@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	insufficientStorageErrorMssg = "could not create user at this moment"
+	insufficientStorageUserError = "could not create user at this moment"
 )
 
 type PublicUserDetails struct {
@@ -88,7 +88,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	passwordSalt := make([]byte, 128)
 	_, err = rand.Read(passwordSalt)
 	if err != nil {
-		render.RespondFailure(w, http.StatusInsufficientStorage, insufficientStorageErrorMssg)
+		render.RespondFailure(w, http.StatusInsufficientStorage, insufficientStorageUserError)
 		return
 	}
 	password := auth.SaltyPassword([]byte(cu.Password), passwordSalt)
@@ -111,7 +111,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 				"constraint", pgErr.ConstraintName,
 			)
 		}
-		render.RespondFailure(w, http.StatusInsufficientStorage, insufficientStorageErrorMssg)
+		render.RespondFailure(w, http.StatusInsufficientStorage, insufficientStorageUserError)
 		return
 	}
 	// send back user data

@@ -125,3 +125,42 @@ func (q *Queries) GetMessageById(ctx context.Context, mssgID int64) (GetMessageB
 	)
 	return i, err
 }
+
+const getMessageByIdPublic = `-- name: GetMessageByIdPublic :one
+SELECT mm.mssg_id, fu.user_id as from_user_id, tu.user_id as to_user_id, mm.mssg_status, mm.created_at, mm.updated_at, mtm.mssg_type, mtm.attach_mssg_id, mt.mssg_body
+FROM message_meta mm
+JOIN message_type_meta mtm ON mtm.mssg_id = mm.mssg_id
+JOIN message_text mt ON mt.mssg_id = mm.mssg_id
+JOIN users fu ON fu.pvt_id = mm.from_pvt_id
+JOIN users tu ON tu.pvt_id = mm.to_pvt_id
+WHERE mm.mssg_id = $1
+`
+
+type GetMessageByIdPublicRow struct {
+	MssgID       int64         `json:"mssg_id"`
+	FromUserID   pgtype.UUID   `json:"from_user_id"`
+	ToUserID     pgtype.UUID   `json:"to_user_id"`
+	MssgStatus   MessageStatus `json:"mssg_status"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+	MssgType     MessageType   `json:"mssg_type"`
+	AttachMssgID pgtype.Int8   `json:"attach_mssg_id"`
+	MssgBody     string        `json:"mssg_body"`
+}
+
+func (q *Queries) GetMessageByIdPublic(ctx context.Context, mssgID int64) (GetMessageByIdPublicRow, error) {
+	row := q.db.QueryRow(ctx, getMessageByIdPublic, mssgID)
+	var i GetMessageByIdPublicRow
+	err := row.Scan(
+		&i.MssgID,
+		&i.FromUserID,
+		&i.ToUserID,
+		&i.MssgStatus,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MssgType,
+		&i.AttachMssgID,
+		&i.MssgBody,
+	)
+	return i, err
+}
