@@ -1,6 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TYPE message_status AS ENUM ('sent', 'delivered', 'read');
+CREATE TYPE message_type AS ENUM ('normal', 'reply', 'reaction');
 
 CREATE TABLE message_meta (
     mssg_id BIGSERIAL PRIMARY KEY,
@@ -13,6 +14,12 @@ CREATE TABLE message_meta (
     mssg_status message_status NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE message_type_meta (
+    mssg_id BIGINT PRIMARY KEY REFERENCES message_meta,
+    mssg_type message_type NOT NULL,
+    attach_mssg_id BIGINT REFERENCES message_meta
 );
 
 CREATE TABLE message_text (
