@@ -5,10 +5,168 @@
 package database
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type MessageStatus string
+
+const (
+	MessageStatusSent      MessageStatus = "sent"
+	MessageStatusDelivered MessageStatus = "delivered"
+	MessageStatusRead      MessageStatus = "read"
+)
+
+func (e *MessageStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MessageStatus(s)
+	case string:
+		*e = MessageStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MessageStatus: %T", src)
+	}
+	return nil
+}
+
+type NullMessageStatus struct {
+	MessageStatus MessageStatus `json:"message_status"`
+	Valid         bool          `json:"valid"` // Valid is true if MessageStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMessageStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.MessageStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MessageStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMessageStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MessageStatus), nil
+}
+
+type MessageType string
+
+const (
+	MessageTypeNormal   MessageType = "normal"
+	MessageTypeReply    MessageType = "reply"
+	MessageTypeReaction MessageType = "reaction"
+)
+
+func (e *MessageType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MessageType(s)
+	case string:
+		*e = MessageType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MessageType: %T", src)
+	}
+	return nil
+}
+
+type NullMessageType struct {
+	MessageType MessageType `json:"message_type"`
+	Valid       bool        `json:"valid"` // Valid is true if MessageType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMessageType) Scan(value interface{}) error {
+	if value == nil {
+		ns.MessageType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MessageType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMessageType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MessageType), nil
+}
+
+type MessageMetum struct {
+	MssgID     int64         `json:"mssg_id"`
+	FromPvtID  int32         `json:"from_pvt_id"`
+	ToPvtID    int32         `json:"to_pvt_id"`
+	MssgStatus MessageStatus `json:"mssg_status"`
+	CreatedAt  time.Time     `json:"created_at"`
+	UpdatedAt  time.Time     `json:"updated_at"`
+}
+
+type MessageText struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText0 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText1 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText2 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText3 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText4 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText5 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText6 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText7 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText8 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageText9 struct {
+	MssgID   int64  `json:"mssg_id"`
+	MssgBody string `json:"mssg_body"`
+}
+
+type MessageTypeMetum struct {
+	MssgID       int64       `json:"mssg_id"`
+	MssgType     MessageType `json:"mssg_type"`
+	AttachMssgID pgtype.Int8 `json:"attach_mssg_id"`
+}
 
 type User struct {
 	PvtID        int32            `json:"pvt_id"`
