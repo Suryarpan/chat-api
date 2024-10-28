@@ -32,6 +32,7 @@ type PublicUserDetails struct {
 }
 
 func convertToPublicUser(u database.User) PublicUserDetails {
+	slog.Debug("converting to public data", "user_id", u.UserID, "user_name", u.Username)
 	return PublicUserDetails{
 		UserID:       u.UserID,
 		Username:     u.Username,
@@ -44,7 +45,7 @@ func convertToPublicUser(u database.User) PublicUserDetails {
 
 func handleGetUserDetail(w http.ResponseWriter, r *http.Request) {
 	user := auth.GetUserData(r)
-
+	slog.Info("getting user data", "user_id", user.UserID, "user_name", user.Username)
 	publicData := convertToPublicUser(user)
 	render.RespondSuccess(w, http.StatusOK, publicData)
 }
@@ -60,9 +61,11 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	reader := json.NewDecoder(r.Body)
 	err := reader.Decode(&cu)
 	if err != nil {
+		slog.Warn("could not decode create user data", "error", err)
 		render.RespondFailure(w, 400, "could not decode data")
 		return
 	}
+	slog.Info("creating new user", "user_name", cu.Username, "display_name", cu.DisplayName)
 
 	apiCfg := apiconf.GetConfig(r)
 	// validate incoming data
@@ -81,6 +84,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	queries := database.New(apiCfg.ConnPool)
 	_, err = queries.GetUserByName(r.Context(), cu.Username)
 	if err == nil {
+		slog.Warn("could not check DB for username", "error", err)
 		render.RespondFailure(w, http.StatusNotAcceptable, map[string]string{"username": "already exists"})
 		return
 	}
@@ -88,6 +92,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	passwordSalt := make([]byte, 128)
 	_, err = rand.Read(passwordSalt)
 	if err != nil {
+		slog.Error("could not generate salt for password", "error", err)
 		render.RespondFailure(w, http.StatusInsufficientStorage, insufficientStorageUserError)
 		return
 	}
@@ -145,9 +150,11 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := auth.GetUserData(r)
+	slog.Info("updating user details", "user_id", user.UserID, "user_name", user.Username)
 	// nothing to update
 	emptyData := updateUserData{}
 	if ud == emptyData {
+		slog.Info("nothing to update", "user_id", user.UserID, "user_name", user.Username)
 		render.RespondSuccess(w, http.StatusOK, convertToPublicUser(user))
 		return
 	}
@@ -178,6 +185,7 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		PvtID:       user.PvtID,
 	})
 	if err != nil {
+		slog.Error("could not update user data", "user_id", user.UserID, "user_name", user.Username)
 		render.RespondFailure(w, http.StatusInsufficientStorage, "could not update at this time")
 		return
 	}
@@ -186,10 +194,12 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	user := auth.GetUserData(r)
+	slog.Info("deleting user details", "user_id", user.UserID, "user_name", user.Username)
 	apiCfg := apiconf.GetConfig(r)
 	queries := database.New(apiCfg.ConnPool)
 	delUser, err := queries.DeleteUserDetails(r.Context(), user.PvtID)
 	if err != nil {
+		slog.Error("could not delete user details", "user_id", user.UserID, "user_name", user.Username)
 		render.RespondFailure(w, http.StatusInternalServerError, "could not delete at this time")
 		return
 	}
