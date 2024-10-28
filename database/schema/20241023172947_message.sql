@@ -44,6 +44,8 @@ CREATE TABLE message_text_9 PARTITION OF message_text FOR VALUES WITH (MODULUS 1
 -- +goose Down
 -- +goose StatementBegin
 DROP TABLE message_text;
+DROP TABLE message_type_meta;
 DROP TABLE message_meta;
 DROP TYPE message_status;
+DROP TYPE message_type;
 -- +goose StatementEnd
