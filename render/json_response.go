@@ -10,7 +10,7 @@ import (
 )
 
 type errorMsg struct {
-	Message interface{} `json:"message"`
+	Message any `json:"message"`
 }
 
 func RespondValidationFailure(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
@@ -21,7 +21,7 @@ func RespondValidationFailure(w http.ResponseWriter, validationErrors validator.
 	RespondFailure(w, http.StatusBadRequest, errorMssgs)
 }
 
-func RespondFailure(w http.ResponseWriter, code int, msg interface{}) {
+func RespondFailure(w http.ResponseWriter, code int, msg any) {
 	if 399 < code && code < 499 {
 		slog.Warn("bad user data received", "error", msg)
 	} else if 499 < code && code < 599 {
@@ -37,7 +37,7 @@ func RespondFailure(w http.ResponseWriter, code int, msg interface{}) {
 	RespondSuccess(w, code, err)
 }
 
-func RespondSuccess(w http.ResponseWriter, code int, obj interface{}) {
+func RespondSuccess(w http.ResponseWriter, code int, obj any) {
 	w.Header().Set("content-type", "application/json;charset=UTF-8")
 	w.WriteHeader(code)
 	if code == http.StatusNoContent {

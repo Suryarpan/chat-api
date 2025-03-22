@@ -129,10 +129,16 @@ func handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("seding back reponse", "message", mssgContent)
+	slog.Info("sending back reponse", "message", mssgContent)
 	render.RespondSuccess(w, http.StatusOK, mssgContent)
 }
 
+
+
+
+
+
+  
 func MessageRouter() *chi.Mux {
 	router := chi.NewMux()
 

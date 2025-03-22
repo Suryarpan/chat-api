@@ -73,7 +73,7 @@ func tokenToUser(s string, secret []byte) (*tokenData, error) {
 	token, err := jwt.ParseWithClaims(
 		s,
 		&tokenData{},
-		func(t *jwt.Token) (interface{}, error) {
+		func(t *jwt.Token) (any, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 			}
