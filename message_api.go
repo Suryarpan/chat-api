@@ -20,10 +20,10 @@ const (
 )
 
 type createMessageData struct {
-	ToUserId     pgtype.UUID `json:"to_user_id" validate:"required"`
-	MssgType     string      `json:"mssg_type" validate:"required,oneof=normal reply reaction"`
+	ToUserId     pgtype.UUID `json:"to_user_id"     validate:"required"`
+	MssgType     string      `json:"mssg_type"      validate:"required,oneof=normal reply reaction"`
 	AttachMssgId int64       `json:"attach_mssg_id" validate:"omitempty,min=1"`
-	MssgBody     string      `json:"mssg_body" validate:"required,min=1,printascii|alphanumunicode"`
+	MssgBody     string      `json:"mssg_body"      validate:"required,min=1,printascii|alphanumunicode"`
 }
 
 func handleCreateMessage(w http.ResponseWriter, r *http.Request) {
@@ -133,12 +133,6 @@ func handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 	render.RespondSuccess(w, http.StatusOK, mssgContent)
 }
 
-
-
-
-
-
-  
 func MessageRouter() *chi.Mux {
 	router := chi.NewMux()
 
